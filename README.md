@@ -14,7 +14,7 @@ Create Baal instance with macros or with function.
  - blockSize - size of single block
  - blocksNumber - total number of blocks
 
-This macro expands into several variable definitions and at the end will define pointer to **Baal** instance with provided name
+This macro expands into several variable definitions and at the end it will define pointer to **Baal** instance with provided **name**
 ```c
 #define BAAL_IMPLEMENTATION
 #include "Baal.h"
@@ -31,10 +31,70 @@ int main(void) {
 **Baal_defineStatic(name, blockSize, blocksNumber)** does the same thing with **Baal_define(name, blockSize, blocksNumber)** but adds modifier **static** to variable definitions.
 
 ### Functions
+**Baal* Baal_create(size_t blockSize, size_t blocksNumber)**
+ - **returns** - **Baal** instance
+ - **blockSize** - size of a single block
+ - **blocksNumber** - maximum number of blocks to be allocated
 
+By default this function uses **malloc** to allocate required memory from heap, but it can be changed by defining **BAAL_STD_MALLOC** macro with desired function before including the implementation.
+
+**void Baal_destroy(Baal*)** function destroys provided **Baal** instance and frees allocated memory. Basically this function is just an alias for std **free()**, which can be replaced by defining **BAAL_STD_FREE** with desired function.
+
+```c
+#define BAAL_IMPLEMENTATION
+#include "Baal.h"
+
+int main(void) {
+    Baal* baal = Baal_create(10, 20);
+
+    // Do smth
+
+    Baal_destroy(baal);
+
+    return 0;
+}
+```
 
 ## Allocate
-Use **Baal_alloc()** to allocate next available block and **Baal_free()** to free it. **Baal_alloc()** returns **NULL** if no free blocks left.
+### Multiple blocks
+**void* Baal_allocMany(Baal* baal, size_t number)**
+ - **returns** - **NULLABLE** - pointer to allocated memory
+ - **baal** - **Baal** instance
+ - **number** - number of blocks to be allocated
+
+This function allocates required number of blocks in a row and returns pointer to the first block. Returns **NULL** if it is not possible to allocate required sequence of blocks.
+
+```c
+#include <stdio.h>
+
+#define BAAL_IMPLEMENTATION
+#include "Baal.h"
+
+int main(void) {
+    Baal_define(baal, 1, 20);
+
+    char* str = Baal_allocMany(baal, 4);
+
+    str[0] = 'H';
+    str[1] = 'i';
+    str[2] = '!';
+    str[3] = '\0';
+
+    printf("%s\n", str);
+
+    Baal_free(baal, str);
+
+    return 0;
+}
+```
+
+### Single block
+**void* Baal_alloc(Baal* baal)**
+ - **returns** - **NULLABLE** - pointer to allocated block
+ - **baal** - **Baal** instance
+
+Allocates single block of memory and returns it. 
+
 ```c
 #include <stdio.h>
 
@@ -46,7 +106,7 @@ typedef struct Obj {
     int counter;
 } Obj;
 
-Baal_createStatic(objects, sizeof(Obj), 10);
+Baal_defineStatic(objects, sizeof(Obj), 10);
 
 int main(void) {
     Obj* obj = Baal_alloc(objects);
@@ -61,6 +121,7 @@ int main(void) {
     return 0;
 }
 ```
+
 ## Clear
 Use **Baal_clear()** to fully clear the buffer.
 > Note, that the function doesn't actually resets the memory, it just resets the pointers pool.
@@ -75,7 +136,7 @@ typedef struct Obj {
     int counter;
 } Obj;
 
-Baal_createStatic(objects, sizeof(Obj), 10);
+Baal_defineStatic(objects, sizeof(Obj), 10);
 
 int main(void) {
     Obj* obj = Baal_alloc(objects);
@@ -97,24 +158,22 @@ You can use **Baal_print()** function to print status of memory blocks:
 #define BAAL_IMPLEMENTATION
 #include "Baal.h"
 
-Baal_createStatic(numbers, sizeof(int), 10);
+Baal_defineStatic(numbers, sizeof(int), 10);
 
 int main(void) {
     Baal_alloc(numbers);
 
     Baal_print(numbers);
-    // Blocks:
-    // 0 : 0x103174060 : busy
-    // 1 : 0x103174064 : free
-    // 2 : 0x103174068 : free
-    // 3 : 0x10317406c : free
-    // 4 : 0x103174070 : free
-    // 5 : 0x103174074 : free
-    // 6 : 0x103174078 : free
-    // 7 : 0x10317407c : free
-    // 8 : 0x103174080 : free
-    // 9 : 0x103174084 : free
-    // Free stack size: 0
+    // [001]  BUSY
+    // [002]  FREE  CHUNK SIZE: 9
+    // [003]  FREE
+    // [004]  FREE
+    // [005]  FREE
+    // [006]  FREE
+    // [007]  FREE
+    // [008]  FREE
+    // [009]  FREE
+    // [010]  FREE
 
     Baal_clear(numbers);
 

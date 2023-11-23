@@ -70,6 +70,7 @@ void Baal_destroy(Baal*);
 void* Baal_alloc(Baal* baal);
 void* Baal_allocMany(Baal* baal, size_t number);
 void Baal_free(Baal* baal, void* ptr);
+void Baal_clear(Baal* baal);
 
 void Baal_print(Baal* baal);
 
