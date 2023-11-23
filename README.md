@@ -1,6 +1,8 @@
 # Hi There
 This is STB-like library for block memory allocation.
 
+> Note, that this library supports multiple blocks allocation, so if you don't need it, and just want to allocate single blocks, consider to use [Baal_light](https://github.com/Astroner/Baal_light) because it is more memory efficient for this case.
+
 # Include
 As with any header only library, you need to include *Baal.h* library to your project and define **BAAL_IMPLEMENTATION** before **include** statement to include the implementation.
 
