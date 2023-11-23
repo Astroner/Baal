@@ -4,6 +4,17 @@ This is STB-like library for block memory allocation.
 # Include
 As with any header only library, you need to include *Baal.h* library to your project and define **BAAL_IMPLEMENTATION** before **include** statement to include the implementation.
 
+# Table of content
+ - [Usage](#usage)
+     - [Create instance](#create-instance)
+         - [Macros](#macros)
+         - [Functions](#functions)
+     - [Allocate](#allocate)
+         - [Multiple blocks](#multiple-blocks)
+         - [Single block](#single-block)
+     - [Clear](#clear)
+     - [Print](#print)
+
 # Usage
 ## Create instance
 Create Baal instance with macros or with function.
@@ -56,6 +67,8 @@ int main(void) {
 ```
 
 ## Allocate
+Any memory allocated with **Baal** can be freed with **void Baal_free(Baal* baal, void* ptr)** function.
+
 ### Multiple blocks
 **void* Baal_allocMany(Baal* baal, size_t number)**
  - **returns** - **NULLABLE** - pointer to allocated memory
