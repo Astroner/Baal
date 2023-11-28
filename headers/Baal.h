@@ -2,76 +2,87 @@
 #define BAAL_H
 
 #include <stddef.h>
-#include <string.h>
 
-// INDEXING STARTS WITH 1 NOT WITH 0
-// to allow not existing prev and next indexes
-// therefore lengths and info arrays have N + 1 length
+#define BAAL_INTERNAL_ADDED_INFO\
+    size_t chunkSize;\
+
+#define BAAL_INTERNAL_INSERTED_INFO\
+    struct Baal_internal_ChunkInfo* nextChunk;
+
+typedef struct Baal_internal_AddedInfo {
+    BAAL_INTERNAL_ADDED_INFO
+} Baal_internal_AddedInfo;
+
+typedef struct Baal_internal_InsertedInfo {
+    BAAL_INTERNAL_INSERTED_INFO
+} Baal_internal_InsertedInfo;
+
 typedef struct Baal_internal_ChunkInfo {
-    size_t prevIndex;
-    size_t nextIndex;
-    int status;
-    size_t length;
+    BAAL_INTERNAL_ADDED_INFO
+    BAAL_INTERNAL_INSERTED_INFO
 } Baal_internal_ChunkInfo;
 
-typedef struct Baal {
-    Baal_internal_ChunkInfo* info; // array of chunk info
-    size_t cursor; // pointer to first free chunk
+#define BAAL_GROUP_MIN_SIZE sizeof(Baal_internal_InsertedInfo)
+#define BAAL_ADDED_INFO_SIZE sizeof(Baal_internal_AddedInfo)
 
+#define Baal_roundBlockLength(BLOCK_SIZE, GROUP_SIZE) (BLOCK_SIZE * GROUP_SIZE >= BAAL_GROUP_MIN_SIZE ? BLOCK_SIZE : BAAL_GROUP_MIN_SIZE / GROUP_SIZE)
+
+#define Baal_getTotalMemorySize(BLOCK_SIZE, GROUP_SIZE, GROUPS_NUMBER)\
+    (GROUPS_NUMBER * (Baal_roundBlockLength(BLOCK_SIZE, GROUP_SIZE) * GROUP_SIZE + BAAL_ADDED_INFO_SIZE))
+
+typedef struct Baal {
+    int initialized;
+    Baal_internal_ChunkInfo* first;
     char* buffer;
-    size_t blockSize;
-    size_t blocksNumber;
+    size_t blockLength;
+    size_t groupSize;
+    size_t groupLength;
+    size_t groupsNumber;
 } Baal;
 
-#define Baal_define(name, blockSizeArg, blocksNumberArg)\
-    Baal_internal_ChunkInfo name##__info[blocksNumberArg + 1] = {\
-        [1] = {\
-            .prevIndex = 0,\
-            .nextIndex = 0,\
-            .status = 0,\
-            .length = blocksNumberArg\
-        }\
+#define Baal_define(NAME, BLOCK_SIZE, GROUP_SIZE, GROUPS_NUMBER)\
+    char NAME##__buffer[Baal_getTotalMemorySize(BLOCK_SIZE, GROUP_SIZE, GROUPS_NUMBER)];\
+    Baal NAME##__data = {\
+        .initialized = 0,\
+        .buffer = NAME##__buffer,\
+        .blockLength = Baal_roundBlockLength(BLOCK_SIZE, GROUP_SIZE),\
+        .groupSize = GROUP_SIZE,\
+        .groupsNumber = GROUPS_NUMBER,\
     };\
-    char name##__buffer[blockSizeArg * blocksNumberArg];\
-    Baal name##__data = {\
-        .info = name##__info,\
-        .cursor = 1,\
-        \
-        .buffer = name##__buffer,\
-        .blockSize = blockSizeArg,\
-        .blocksNumber = blocksNumberArg,\
-    };\
-    Baal* name = &name##__data;
+    Baal* NAME = &NAME##__data;\
 
-#define Baal_defineStatic(name, blockSizeArg, blocksNumberArg)\
-    static Baal_internal_ChunkInfo name##__info[blocksNumberArg + 1] = {\
-        [1] = {\
-            .prevIndex = 0,\
-            .nextIndex = 0,\
-            .status = 0,\
-            .length = blocksNumberArg\
-        }\
+#define Baal_defineStatic(NAME, BLOCK_SIZE, GROUP_SIZE, GROUPS_NUMBER)\
+    static char NAME##__buffer[Baal_getTotalMemorySize(BLOCK_SIZE, GROUP_SIZE, GROUPS_NUMBER)];\
+    static Baal NAME##__data = {\
+        .initialized = 0,\
+        .buffer = NAME##__buffer,\
+        .blockLength = Baal_roundBlockLength(BLOCK_SIZE, GROUP_SIZE),\
+        .groupSize = GROUP_SIZE,\
+        .groupsNumber = GROUPS_NUMBER,\
     };\
-    static char name##__buffer[blockSizeArg * blocksNumberArg];\
-    static Baal name##__data = {\
-        .info = name##__info,\
-        .cursor = 1,\
-        \
-        .buffer = name##__buffer,\
-        .blockSize = blockSizeArg,\
-        .blocksNumber = blocksNumberArg,\
-    };\
-    static Baal* name = &name##__data;
+    static Baal* NAME = &NAME##__data;\
 
-Baal* Baal_create(size_t blockSize, size_t blocksNumber);
+
+Baal* Baal_create(size_t blockLength, size_t groupSize, size_t groupsNumber);
 // Just free() alias
 void Baal_destroy(Baal*);
+Baal* Baal_init(Baal* baal);
+Baal* Baal_construct(Baal* baal, char* buffer, size_t bufferLength, size_t blockLength, size_t groupSize);
 
-void* Baal_alloc(Baal* baal);
-void* Baal_allocMany(Baal* baal, size_t number);
+// allocates number of blocks fitting bytes number. Imitates std malloc.
+void* Baal_alloc(Baal* baal, size_t bytes);
+// allocates one block
+void* Baal_allocBlock(Baal* baal);
+// allocates series of blocks
+void* Baal_allocMany(Baal* baal, size_t blocksNumber);
+void* Baal_realloc(Baal* baal, void* ptr, size_t newBytes);
+void* Baal_reallocBlocks(Baal* baal, void* ptr, size_t newBlocksSize);
+
+
 void Baal_free(Baal* baal, void* ptr);
 void Baal_clear(Baal* baal);
 
-void Baal_print(Baal* baal);
+void Baal_print(const Baal* baal);
+void Baal_memorySnapshot(const Baal* baal);
 
 #endif // BAAL_H

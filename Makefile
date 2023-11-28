@@ -13,7 +13,7 @@ build: $(OBJECTS)
 	$(CC) $(CFLAGS) -o $(EXECUTABLE) $^
 
 .c.o:
-	$(CC) $(CFLAGS) -c -I$(HEADERS) -Wall -Wextra -o $@ $<
+	$(CC) $(CFLAGS) -c -std=c99 -pedantic -I$(HEADERS) -Wall -Wextra -o $@ $<
 
 lib: headers/Baal.h src/Baal.c
 	echo "/*" > $(LIBNAME)
