@@ -18,17 +18,20 @@ typedef struct Property {
     } value;
 } Property;
 
-Baal_define(test, 1, 4, 20)
+Baal_define(test, 1, 1, 10)
 
 int main(void) {
-    char* hi = Baal_allocMany(test, 5);
-    strncpy(hi, "Hi!", 4);
+    void* a = Baal_allocMany(test, 2);
+    char* b = Baal_allocMany(test, 2);
+    void* c = Baal_allocMany(test, 6);
 
-    printf("%s\n", hi);
-    
+    *b = 32;
+
+    Baal_free(test, a);
+
+    Baal_reallocBlocks(test, b, 3);
+
     Baal_print(test);
-
-    Baal_reallocBlocks(test, hi, 10);
 
     // Baal_memorySnapshot(test);
 

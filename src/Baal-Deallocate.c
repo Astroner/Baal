@@ -4,6 +4,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 
 
@@ -129,25 +130,49 @@ void* Baal_reallocBlocks(Baal* baal, void* ptr, size_t newBlocksSize) {
 
 
     int checkedNeighbors = 0;
+    Baal_internal_ChunkInfo* chunkToReallocatePrevPrev = NULL;
     Baal_internal_ChunkInfo* chunkToReallocatePrev = NULL;
-    Baal_internal_ChunkInfo* chunkToReallocateNext = NULL;
+    Baal_internal_ChunkInfo* chunkToReallocateNext = NULL; // This value should be used only if chunkToReallocatePrev is not available
 
     int hasPerfectHit = 0;
     Baal_internal_ChunkInfo* fittestPrev = NULL;
     Baal_internal_ChunkInfo* fittest = NULL;
 
+    Baal_internal_ChunkInfo* prevPrev = NULL;
     Baal_internal_ChunkInfo* prev = NULL;
     Baal_internal_ChunkInfo* current = baal->first;
     while(1) {
         if(chunkToReallocate < current) {
             if(
                 (char*)chunkToReallocate + chunkToReallocate->chunkSize * baal->groupLength == (char*)current
-                && requiredGroups <= chunkToReallocate->chunkSize + current->chunkSize
+                && (requiredGroups <= chunkToReallocate->chunkSize + current->chunkSize)
             ) {
-                TODO("Expand chunk by taking space from the next chunk");
+                size_t groupsToAdd = requiredGroups - chunkToReallocate->chunkSize;
+                if(groupsToAdd == current->chunkSize) {
+                    chunkToReallocate->chunkSize = requiredGroups;
 
-                return chunkToReallocate;
+                    if(prev) {
+                        prev->nextChunk = current->nextChunk;
+                    } else {
+                        baal->first = current->nextChunk;
+                    }
+                } else {
+                    Baal_internal_ChunkInfo* newChunk = (Baal_internal_ChunkInfo*)((char*)current + groupsToAdd * baal->groupLength);
+                    newChunk->nextChunk = current->nextChunk;
+                    newChunk->chunkSize = current->chunkSize - groupsToAdd;
+
+                    chunkToReallocate->chunkSize = requiredGroups;
+
+                    if(prev) {
+                        prev->nextChunk = newChunk;
+                    } else {
+                        baal->first = newChunk;
+                    }
+                }
+
+                return ptr;
             } else {
+                chunkToReallocatePrevPrev = prevPrev;
                 chunkToReallocatePrev = prev;
                 chunkToReallocateNext = current;
                 checkedNeighbors = 1;
@@ -178,6 +203,7 @@ void* Baal_reallocBlocks(Baal* baal, void* ptr, size_t newBlocksSize) {
         }
         
         if(current->nextChunk) {
+            prevPrev = prev;
             prev = current;
             current = current->nextChunk;
         } else {
@@ -189,12 +215,107 @@ void* Baal_reallocBlocks(Baal* baal, void* ptr, size_t newBlocksSize) {
     }
 
     if(fittest) {
-        TODO("Allocate new chunk and copy data there");
+        Baal_internal_ChunkInfo* newChunk = NULL;
+        if(hasPerfectHit) {
+            if(fittestPrev) {
+                fittestPrev->nextChunk = fittest->nextChunk;
+            } else {
+                baal->first = fittest->nextChunk;
+            }
 
-        return fittest;
+            if(chunkToReallocatePrev == fittest) {
+                chunkToReallocatePrev = fittestPrev;
+            }
+
+            if(chunkToReallocateNext == fittest) {
+                chunkToReallocateNext = fittest->nextChunk;
+            }
+        } else {
+            newChunk = (Baal_internal_ChunkInfo*)((char*)fittest + requiredGroups * baal->groupSize);
+            newChunk->chunkSize = fittest->chunkSize - requiredGroups;
+            newChunk->nextChunk = fittest->nextChunk;
+
+            fittest->chunkSize = requiredGroups;
+
+            if(fittestPrev) {
+                fittestPrev->nextChunk = newChunk;
+            } else {
+                baal->first = newChunk;
+            }
+
+            if(chunkToReallocatePrev == fittest) {
+                chunkToReallocatePrev = newChunk;
+            }
+
+            if(chunkToReallocateNext == fittest) {
+                chunkToReallocateNext = newChunk;
+            }
+        }
+
+        void* newPtr = (char*)fittest + BAAL_ADDED_INFO_SIZE;
+
+        memcpy(newPtr, ptr, chunkToReallocate->chunkSize * baal->groupLength);
+
+        if(chunkToReallocateNext) {
+            chunkToReallocate->nextChunk = chunkToReallocateNext;
+            Baal_internal_mergeWithNext(baal, chunkToReallocate);
+        }
+
+        if(chunkToReallocatePrev) {
+            chunkToReallocatePrev->nextChunk = chunkToReallocate;
+            Baal_internal_mergeWithNext(baal, chunkToReallocatePrev);
+        } else {
+            baal->first = chunkToReallocate;
+        }
+
+        return newPtr;
     }
 
-    TODO("Try to concatenate neighbors to reach required groups size");
+    // At this point we already checked next chunk after the one to reallocate
+    // So if we got here we already know that next chunk is either not neighboring or not sufficient
+    // So without neighboring prev chunk it is pointless to continue
+    if(
+        chunkToReallocatePrev == NULL 
+        || (char*)chunkToReallocatePrev + chunkToReallocatePrev->chunkSize * baal->groupLength != (char*)chunkToReallocate
+    ) return NULL;
 
-    return NULL;
+    // To keep fragmentation low, it is better to at first try to merge neighboring chunks to operate with bigger pieces
+    if(
+        chunkToReallocateNext != NULL
+        && (char*)chunkToReallocate + chunkToReallocate->chunkSize * baal->groupLength == (char*)chunkToReallocateNext
+    ) {
+        TODO("At first try to compose prev, current and next");
+    }
+
+    // Now we only left with prev and current
+    size_t prevCurrentSize = chunkToReallocatePrev->chunkSize + chunkToReallocate->chunkSize;
+    if(prevCurrentSize < requiredGroups) return NULL;
+    
+    // Take entire prev chunk
+    if(prevCurrentSize == requiredGroups) {
+        if(chunkToReallocatePrevPrev != NULL) {
+            chunkToReallocatePrevPrev->nextChunk = chunkToReallocateNext;
+        } else {
+            baal->first = chunkToReallocateNext;
+        }
+
+        chunkToReallocatePrev->chunkSize = requiredGroups;
+
+        void* newPtr = (char*)chunkToReallocatePrev + BAAL_ADDED_INFO_SIZE;
+
+        memmove(newPtr, ptr, chunkToReallocate->chunkSize * baal->groupLength);
+
+        return newPtr;
+    }
+
+    // Take only a part of prev chunk
+    chunkToReallocatePrev->chunkSize -= requiredGroups - chunkToReallocate->chunkSize;
+    Baal_internal_ChunkInfo* newChunk = (Baal_internal_ChunkInfo*)((char*)chunkToReallocatePrev + chunkToReallocatePrev->chunkSize * baal->groupLength);
+    newChunk->chunkSize = requiredGroups;
+
+    void* newPtr = (char*)newChunk + BAAL_ADDED_INFO_SIZE;
+
+    memmove(newPtr, ptr, chunkToReallocate->chunkSize * baal->groupLength);
+
+    return newPtr;
 }

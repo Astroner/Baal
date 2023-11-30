@@ -3,9 +3,19 @@
 
 #if !defined(TODO)
 
-#define TODO(text)\
+#define TODO_STR2(arg) #arg
+#define TODO_STR(arg) TODO_STR2(arg)
+
+/*
+    TODO(text, args)
+    TODO("add this feature")
+    TODO("fix function for number %d", 4)
+*/
+#define TODO(...)\
     do {\
-        printf("Reached TODO at %s:%d\n%s\n", __FILE__, __LINE__, text);\
+        printf("Reached TODO at "__FILE__":"TODO_STR(__LINE__)"\n");\
+        printf(__VA_ARGS__);\
+        putchar('\n');\
         exit(1);\
     } while(0);\
 

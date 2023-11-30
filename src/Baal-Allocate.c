@@ -1,5 +1,7 @@
 #include "Baal.h"
 
+#include <stdio.h>
+
 void* Baal_alloc(Baal* baal, size_t bytes) {
     size_t blocksNumber = bytes / baal->blockLength;
     if(blocksNumber * baal->blockLength != bytes) {
@@ -48,13 +50,13 @@ void* Baal_allocMany(Baal* baal, size_t blocksNumber) {
                 fittestPrev = prev;
                 fittest = current;
             }
-
-            if(current->nextChunk) {
-                prev = current;
-                current = current->nextChunk;
-            } else {
-                break;
-            }
+        }
+        
+        if(current->nextChunk) {
+            prev = current;
+            current = current->nextChunk;
+        } else {
+            break;
         }
     }
 
