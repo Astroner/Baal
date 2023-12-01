@@ -225,7 +225,7 @@ void* Baal_realloc(Baal* baal, void* ptr, size_t newBlocksNumber) {
                 chunkToReallocateNext = fittest->nextChunk;
             }
         } else {
-            newChunk = (Baal_internal_ChunkInfo*)((char*)fittest + requiredGroups * baal->groupSize);
+            newChunk = (Baal_internal_ChunkInfo*)((char*)fittest + requiredGroups * baal->groupLength);
             newChunk->chunkSize = fittest->chunkSize - requiredGroups;
             newChunk->nextChunk = fittest->nextChunk;
 
@@ -248,7 +248,7 @@ void* Baal_realloc(Baal* baal, void* ptr, size_t newBlocksNumber) {
 
         void* newPtr = (char*)fittest + BAAL_ADDED_INFO_SIZE;
 
-        BAAL_STD_MEMCPY(newPtr, ptr, chunkToReallocate->chunkSize * baal->groupLength);
+        BAAL_STD_MEMCPY(newPtr, ptr, chunkToReallocate->chunkSize * baal->groupLength - BAAL_ADDED_INFO_SIZE);
 
         if(chunkToReallocateNext) {
             chunkToReallocate->nextChunk = chunkToReallocateNext;
@@ -308,7 +308,7 @@ void* Baal_realloc(Baal* baal, void* ptr, size_t newBlocksNumber) {
 
         char* newPtr = (char*)chunkToReallocatePrev + BAAL_ADDED_INFO_SIZE;
 
-        BAAL_STD_MEMMOVE(newPtr, ptr, chunkToReallocate->chunkSize * baal->groupLength);
+        BAAL_STD_MEMMOVE(newPtr, ptr, chunkToReallocate->chunkSize * baal->groupLength - BAAL_ADDED_INFO_SIZE);
 
         return newPtr;
     }
@@ -329,7 +329,7 @@ void* Baal_realloc(Baal* baal, void* ptr, size_t newBlocksNumber) {
 
         void* newPtr = (char*)chunkToReallocatePrev + BAAL_ADDED_INFO_SIZE;
 
-        BAAL_STD_MEMMOVE(newPtr, ptr, chunkToReallocate->chunkSize * baal->groupLength);
+        BAAL_STD_MEMMOVE(newPtr, ptr, chunkToReallocate->chunkSize * baal->groupLength - BAAL_ADDED_INFO_SIZE);
 
         return newPtr;
     }
@@ -341,7 +341,7 @@ void* Baal_realloc(Baal* baal, void* ptr, size_t newBlocksNumber) {
 
     void* newPtr = (char*)newChunk + BAAL_ADDED_INFO_SIZE;
 
-    BAAL_STD_MEMMOVE(newPtr, ptr, chunkToReallocate->chunkSize * baal->groupLength);
+    BAAL_STD_MEMMOVE(newPtr, ptr, chunkToReallocate->chunkSize * baal->groupLength - BAAL_ADDED_INFO_SIZE);
 
     return newPtr;
 }
