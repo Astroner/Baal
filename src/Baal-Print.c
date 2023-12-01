@@ -1,6 +1,6 @@
 #include "Baal.h"
+#include "Baal-Defines.h"
 
-#include <stdio.h>
 
 static inline size_t Baal_internal_chunkGroupIndex(const Baal* baal, const void* chunk) {
     return ((char*)chunk - baal->buffer) / baal->groupLength;
@@ -9,7 +9,7 @@ static inline size_t Baal_internal_chunkGroupIndex(const Baal* baal, const void*
 static void Baal_internal_printChunksBetween(const Baal* baal, const void* start, const void* finish) {
     const Baal_internal_AddedInfo* current = start;
     while(current != finish) {
-        printf("[%.3zu]    BUSY_CHUNK    SIZE: %zu\n", Baal_internal_chunkGroupIndex(baal, current), current->chunkSize);
+        BAAL_STD_PRINT("[%.3zu]    BUSY_CHUNK    SIZE: %zu\n", Baal_internal_chunkGroupIndex(baal, current), current->chunkSize);
 
         current = (Baal_internal_AddedInfo*)((char*)current + current->chunkSize * baal->groupLength);
     }
@@ -21,7 +21,7 @@ void Baal_print(const Baal* baal) {
             Baal_internal_AddedInfo* current = (Baal_internal_AddedInfo*)(
                 baal->buffer + i * (BAAL_ADDED_INFO_SIZE + baal->blockLength * baal->groupSize)
             );
-            printf("[%.3zu]    BUSY_CHUNK    SIZE: %zu\n", i, current->chunkSize);
+            BAAL_STD_PRINT("[%.3zu]    BUSY_CHUNK    SIZE: %zu\n", i, current->chunkSize);
 
             i += current->chunkSize;
         }
@@ -46,7 +46,7 @@ void Baal_print(const Baal* baal) {
             );
         }
 
-        printf("[%.3zu]    FREE_CHUNK    SIZE: %zu\n", Baal_internal_chunkGroupIndex(baal, current), current->chunkSize);
+        BAAL_STD_PRINT("[%.3zu]    FREE_CHUNK    SIZE: %zu\n", Baal_internal_chunkGroupIndex(baal, current), current->chunkSize);
 
         if(current->nextChunk) {
             prev = current;
@@ -67,25 +67,25 @@ void Baal_print(const Baal* baal) {
 void Baal_memorySnapshot(const Baal* baal) {
     size_t totalMemorySize = baal->groupsNumber * baal->groupLength;
 
-    printf("Total Memory Size: %zu\n", totalMemorySize);
-    printf("Added Info Size: %zu\n", BAAL_ADDED_INFO_SIZE);
-    printf("Block Size: %zu\nGroup Size: %zu\nGroups Number: %zu\n", baal->blockLength, baal->groupSize, baal->groupsNumber);
-    printf("First Free Chunk: %p\n", (void*)baal->first);
-    printf("Bytes:\n");
+    BAAL_STD_PRINT("Total Memory Size: %zu\n", totalMemorySize);
+    BAAL_STD_PRINT("Added Info Size: %zu\n", BAAL_ADDED_INFO_SIZE);
+    BAAL_STD_PRINT("Block Size: %zu\nGroup Size: %zu\nGroups Number: %zu\n", baal->blockLength, baal->groupSize, baal->groupsNumber);
+    BAAL_STD_PRINT("First Free Chunk: %p\n", (void*)baal->first);
+    BAAL_STD_PRINT("Bytes:\n");
     for(size_t i = 0; i < totalMemorySize; i++) {
-        if(i % (baal->blockLength * baal->groupSize + BAAL_ADDED_INFO_SIZE) == 0) printf("------------------------------------- GROUP START\n");
+        if(i % (baal->blockLength * baal->groupSize + BAAL_ADDED_INFO_SIZE) == 0) BAAL_STD_PRINT("------------------------------------- GROUP START\n");
 
         int isDataStart = (i - BAAL_ADDED_INFO_SIZE) % baal->groupLength == 0;
-        if(isDataStart) printf("--------------------- DATA START\n");
+        if(isDataStart) BAAL_STD_PRINT("--------------------- DATA START\n");
 
         unsigned int value = (unsigned char)baal->buffer[i];
-        printf("%p    0x%.2X", (void*)(baal->buffer + i), value);
+        BAAL_STD_PRINT("%p    0x%.2X", (void*)(baal->buffer + i), value);
 
         if(isDataStart) {
             void** ptr = (void*)(baal->buffer + i);
-            printf("    AS POINTER %p", *ptr);
+            BAAL_STD_PRINT("    AS POINTER %p", *ptr);
         }
 
-        printf("\n");
+        BAAL_STD_PRINT("\n");
     }
 }

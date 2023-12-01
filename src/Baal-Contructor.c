@@ -1,14 +1,6 @@
 #include "Baal.h"
+#include "Baal-Defines.h"
 
-#include <stdlib.h>
-
-#ifndef BAAL_STD_MALLOC
-    #define BAAL_STD_MALLOC malloc
-#endif
-
-#ifndef BAAL_STD_FREE
-    #define BAAL_STD_FREE free
-#endif
 
 Baal* Baal_create(size_t blockLength, size_t groupSize, size_t groupsNumber) {
     size_t memSize = sizeof(Baal) + Baal_getTotalMemorySize(blockLength, groupSize, groupsNumber);

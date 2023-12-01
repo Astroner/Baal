@@ -1,172 +1,157 @@
-#include <assert.h>
-#include <stdio.h>
-#include <stdlib.h>
+#include "tests.h"
 
-char testMem[1000];
-int mallocCalls = 0;
-size_t mallocLastCalledWith = 0;
+CREATE_PRINTF_LIKE_FUNCTION(testPrint, 500);
 
-int freeCalls = 0;
-void* freeLastCalledWith = NULL;
-    
-void* testMalloc(size_t size) {
-    mallocCalls++;
-    mallocLastCalledWith = size;
-
-    if(size <= sizeof(testMem)) return testMem;
-    return NULL;
-}
-
-void testFree(void* ptr) {
-    freeCalls++;
-    freeLastCalledWith = ptr;
-}
-
-#define BAAL_STD_MALLOC testMalloc
-#define BAAL_STD_FREE testFree
+#define BAAL_STD_PRINT testPrint
 #define BAAL_IMPLEMENTATION
-#include "./Baal.h"
+#include "Baal.h"
 
-char* error = NULL;
-int errorLine = 0;
+DESCRIBE("Baal") {
+    IT("works") {
+        testPrint__reset();
+        Baal_define(test, 200, 1, 1000);
 
-void printCamelCase(char* text) {
-    char ch;
-    while((ch = *text++)) {
-        if(ch >= 'A' && ch <= 'Z') {
-            putchar(' ');
-            putchar(ch + 32);
-        } else {
-            putchar(ch);
-        }
+        char* a = Baal_alloc(test);
+        EXPECT(a) NOT TO_BE(NULL);
+
+        Baal_print(test);
+
+        EXPECT((char*)testPrint__buffer) TO_BE_STRING(
+            "[000]    BUSY_CHUNK    SIZE: 1\n"
+            "[001]    FREE_CHUNK    SIZE: 999\n"
+        )
     }
-}
 
-#define EXPECT(expression)\
-    errorLine = __LINE__;\
-    if(!(expression)) {\
-        error = #expression;\
-    }\
+    IT("allocates memory until it is full") {
+        Baal_define(test, 1, 1, 10);
 
-#define IT(funcName)\
-    do {\
-        funcName();\
-        if(error != NULL) {\
-            printf("it ");\
-            printCamelCase(#funcName);\
-            printf(" - FAILED\nLINE: %d  'EXPECT(%s)'\n\n", errorLine, error);\
-            return 1;\
-        } else {\
-            printf("it ");\
-            printCamelCase(#funcName);\
-            printf(" - PASS\n");\
-        }\
-    } while(0);\
+        EXPECT(Baal_allocMany(test, 2)) NOT TO_BE(NULL);
+        EXPECT(Baal_allocMany(test, 2)) NOT TO_BE(NULL);
+        EXPECT(Baal_allocMany(test, 3)) NOT TO_BE(NULL);
+        EXPECT(Baal_allocMany(test, 10)) TO_BE(NULL);
+    }
 
-void works() {
-    Baal_define(baal, 1, 20);
+    IT("frees memory to be allocated again") {
+        Baal_define(test, 1, 1, 9);
 
-    char* str = Baal_allocMany(baal, 10);
-    EXPECT(str != NULL);
+        char* a = Baal_allocMany(test, 3);
+        char* b = Baal_allocMany(test, 3);
+        char* c = Baal_allocMany(test, 3);
 
-    char* str2 = Baal_allocMany(baal, 10);
-    EXPECT(str2 != NULL);
+        Baal_free(test, a);
 
-    EXPECT(Baal_allocMany(baal, 10) == NULL);
+        char* d = Baal_allocMany(test, 2);
+        EXPECT(d) NOT TO_BE(NULL);
 
-    Baal_free(baal, str);
+        char* e = Baal_allocMany(test, 2);
+        EXPECT(e) TO_BE(NULL);
 
-    char* str3 = Baal_allocMany(baal, 3);
+        Baal_free(test, b);
+        e = Baal_allocMany(test, 4);
+        EXPECT(e) NOT TO_BE(NULL);
+    }
+    
+    IT("clears memory") {
+        Baal_define(test, 1, 1, 9);
 
-    EXPECT(str3 == str);
-}
+        char* a = Baal_allocMany(test, 3);
 
-void allocatesChunksAsExpected() {
-    Baal_define(baal, 1, 20);
+        char* b = Baal_allocMany(test, 9);
+        EXPECT(b) TO_BE(NULL);
 
-    baal->info[1].length = 2;
-    baal->info[1].nextIndex = 3;
+        Baal_clear(test);
 
-    baal->info[3].status = 0;
-    baal->info[3].length = 1;
-    baal->info[3].prevIndex = 1;
-    baal->info[3].nextIndex = 4;
+        b = Baal_allocMany(test, 9);
+        EXPECT(b) NOT TO_BE(NULL);
+    }
 
-    baal->info[4].status = 0;
-    baal->info[4].length = 17;
-    baal->info[4].prevIndex = 3;
-    baal->info[4].nextIndex = 0;
+    IT("shrinks allocated memory") {
+        Baal_define(test, 1, 1, 9);
 
-    char* str = Baal_allocMany(baal, 5);
-    EXPECT(str != NULL);
-    EXPECT(baal->info[4].status == 1);
-    EXPECT(baal->info[4].length == 5);
+        testPrint__reset();
+        char* a = Baal_allocMany(test, 5);
+        Baal_print(test);
 
-    EXPECT(baal->info[9].status == 0);
-    EXPECT(baal->info[9].length == 12);
-    EXPECT(baal->info[9].prevIndex == 3);
-    EXPECT(baal->info[9].nextIndex == 0);
-}
+        EXPECT((char*)testPrint__buffer) TO_BE_STRING(
+            "[000]    BUSY_CHUNK    SIZE: 5\n"
+            "[005]    FREE_CHUNK    SIZE: 4\n"
+        );
 
-void deallocatesChunksAsExpected() {
-    Baal_define(baal, 1, 20);
+        testPrint__reset();
+        Baal_realloc(test, a, 2);
+        Baal_print(test);
+        EXPECT((char*)testPrint__buffer) TO_BE_STRING(
+            "[000]    BUSY_CHUNK    SIZE: 2\n"
+            "[002]    FREE_CHUNK    SIZE: 7\n"
+        );
+    }
 
-    baal->info[1].status = 0;
-    baal->info[1].length = 2;
-    baal->info[1].prevIndex = 0;
-    baal->info[1].nextIndex = 8;
+    IT("extends allocated memory when possible") {
+        Baal_define(test, 1, 1, 9);
+        
+        testPrint__reset();
+        char* a = Baal_allocMany(test, 1);
+        Baal_print(test);
 
-    baal->info[3].status = 1;
-    baal->info[3].length = 5;
+        EXPECT((char*)testPrint__buffer) TO_BE_STRING(
+            "[000]    BUSY_CHUNK    SIZE: 1\n"
+            "[001]    FREE_CHUNK    SIZE: 8\n"
+        );
 
-    baal->info[8].status = 0;
-    baal->info[8].length = 13;
-    baal->info[8].prevIndex = 1;
-    baal->info[8].nextIndex = 0;
+        testPrint__reset();
+        Baal_realloc(test, a, 5);
+        Baal_print(test);
+        EXPECT((char*)testPrint__buffer) TO_BE_STRING(
+            "[000]    BUSY_CHUNK    SIZE: 5\n"
+            "[005]    FREE_CHUNK    SIZE: 4\n"
+        );
+    }
 
-    char* ptr = baal->buffer + 2;
+    IT("doesn't extend allocated memory when it is impossible") {
+        Baal_define(test, 1, 1, 9);
+        
+        testPrint__reset();
+        char* a = Baal_allocMany(test, 1);
+        Baal_print(test);
 
-    Baal_free(baal, ptr);
+        EXPECT((char*)testPrint__buffer) TO_BE_STRING(
+            "[000]    BUSY_CHUNK    SIZE: 1\n"
+            "[001]    FREE_CHUNK    SIZE: 8\n"
+        );
 
-    EXPECT(baal->info[1].status == 0);
-    EXPECT(baal->info[1].length == 20);
-}
+        testPrint__reset();
+        EXPECT(Baal_realloc(test, a, 10)) TO_BE(NULL);
+        Baal_print(test);
+        EXPECT((char*)testPrint__buffer) TO_BE_STRING(
+            "[000]    BUSY_CHUNK    SIZE: 1\n"
+            "[001]    FREE_CHUNK    SIZE: 8\n"
+        );
+    }
 
-void createsAndDestroysInstanceWithProvidedFunctions() {
-    Baal* baal = Baal_create(10, 20);
-    EXPECT(mallocCalls == 1);
-    EXPECT(mallocLastCalledWith < sizeof(testMem));
-    EXPECT((void*)baal == (void*)testMem);
+    IT("reallocates memory to extend it's size") {
+        Baal_define(test, 1, 1, 9);
+        
+        char* a = Baal_allocMany(test, 1);
+        Baal_allocMany(test, 1);
 
-    Baal_destroy(baal);
+        testPrint__reset();
+        Baal_print(test);
 
-    EXPECT(freeCalls == 1);
-    EXPECT(freeLastCalledWith == baal);
-}
 
-void clears() {
-    Baal_define(baal, 1, 20);
+        EXPECT((char*)testPrint__buffer) TO_BE_STRING(
+            "[000]    BUSY_CHUNK    SIZE: 1\n"
+            "[001]    BUSY_CHUNK    SIZE: 1\n"
+            "[002]    FREE_CHUNK    SIZE: 7\n"
+        );
 
-    Baal_allocMany(baal, 15);
-    char* str1 = Baal_allocMany(baal, 15);
-
-    EXPECT(str1 == NULL);
-
-    Baal_clear(baal);
-
-    str1 = Baal_allocMany(baal, 15);
-
-    EXPECT(str1 != NULL);
-}
-
-int main(void) {
-    printf("\nLaunching test cases:\n");
-    IT(works);
-    IT(allocatesChunksAsExpected);
-    IT(deallocatesChunksAsExpected);
-    IT(clears);
-    IT(createsAndDestroysInstanceWithProvidedFunctions);
-
-    printf("\n\n");
-    return 0;
+        EXPECT(Baal_realloc(test, a, 5)) NOT TO_BE(NULL);
+        testPrint__reset();
+        Baal_print(test);
+        EXPECT((char*)testPrint__buffer) TO_BE_STRING(
+            "[000]    FREE_CHUNK    SIZE: 1\n"
+            "[001]    BUSY_CHUNK    SIZE: 1\n"
+            "[002]    BUSY_CHUNK    SIZE: 5\n"
+            "[007]    FREE_CHUNK    SIZE: 2\n"
+        );
+    }
 }

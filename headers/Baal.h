@@ -69,14 +69,12 @@ void Baal_destroy(Baal*);
 Baal* Baal_init(Baal* baal);
 Baal* Baal_construct(Baal* baal, char* buffer, size_t bufferLength, size_t blockLength, size_t groupSize);
 
-// allocates number of blocks fitting bytes number. Imitates std malloc.
-void* Baal_alloc(Baal* baal, size_t bytes);
-// allocates one block
-void* Baal_allocBlock(Baal* baal);
-// allocates series of blocks
+// allocates one group
+void* Baal_alloc(Baal* baal);
+// allocates series of groups
 void* Baal_allocMany(Baal* baal, size_t blocksNumber);
-void* Baal_realloc(Baal* baal, void* ptr, size_t newBytes);
-void* Baal_reallocBlocks(Baal* baal, void* ptr, size_t newBlocksSize);
+
+void* Baal_realloc(Baal* baal, void* ptr, size_t newBlocksNumber);
 
 
 void Baal_free(Baal* baal, void* ptr);

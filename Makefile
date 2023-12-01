@@ -1,33 +1,31 @@
-CC=gcc
-SOURCES:=$(wildcard src/*.c src/*/*.c)
-OBJECTS=$(SOURCES:.c=.o)
-HEADERS=headers
+CC=gcc-13
+LIB_SOURCES=$(wildcard src/*.c)
+DEV_SOURCES=$(LIB_SOURCES) $(wildcard dev/*.c)
+OBJECTS=$(DEV_SOURCES:.c=.o)
 LIBNAME=Baal.h
 
-EXECUTABLE=./start
+DEV_EXECUTABLE=./start
 
-all: build
-	$(EXECUTABLE)
+all: $(DEV_EXECUTABLE)
+	$(DEV_EXECUTABLE)
 
-build: $(OBJECTS)
-	$(CC) $(CFLAGS) -o $(EXECUTABLE) $^
+$(DEV_EXECUTABLE): $(OBJECTS)
+	$(CC) $(CFLAGS) -o $(DEV_EXECUTABLE) $^
 
-.c.o:
-	$(CC) $(CFLAGS) -c -std=c99 -pedantic -I$(HEADERS) -Wall -Wextra -o $@ $<
+$(OBJECTS): %.o: %.c
+	$(CC) $(CFLAGS) -c -std=c99 -pedantic -Iheaders -Wall -Wextra -o $@ $<
 
-lib: headers/Baal.h src/Baal.c
-	echo "/*" > $(LIBNAME)
-	cat README.md >> $(LIBNAME)
-	echo "*/\n\n" >> $(LIBNAME)
-	cat headers/Baal.h >> $(LIBNAME)
+lib: headers/Baal.h headers/Baal-Defines.h $(LIB_SOURCES)
+	cat headers/Baal.h > $(LIBNAME)
 	echo "#if defined(BAAL_IMPLEMENTATION)" >> $(LIBNAME)
-	tail -n +2 src/Baal.c >> $(LIBNAME)
+	cat headers/Baal-Defines.h >> $(LIBNAME)
+	$(foreach srcFile, $(LIB_SOURCES), tail -n +3 $(srcFile) >> $(LIBNAME);)
 	echo "\n#endif" >> $(LIBNAME)
 
-test: lib
+tests: lib
 	$(CC) -o test test.c
 	./test
 	rm -f test
 
 clean:
-	rm -f $(EXECUTABLE) $(OBJECTS) $(LIBNAME)
+	rm -f $(DEV_EXECUTABLE) $(OBJECTS) $(LIBNAME)

@@ -1,17 +1,8 @@
 #include "Baal.h"
 
-#include <stdio.h>
 
-void* Baal_alloc(Baal* baal, size_t bytes) {
-    size_t blocksNumber = bytes / baal->blockLength;
-    if(blocksNumber * baal->blockLength != bytes) {
-        blocksNumber += 1;
-    }
 
-    return Baal_allocMany(baal, blocksNumber);
-}
-
-void* Baal_allocBlock(Baal* baal) {
+void* Baal_alloc(Baal* baal) {
     return Baal_allocMany(baal, baal->groupSize);
 }
 
@@ -51,7 +42,7 @@ void* Baal_allocMany(Baal* baal, size_t blocksNumber) {
                 fittest = current;
             }
         }
-        
+
         if(current->nextChunk) {
             prev = current;
             current = current->nextChunk;
