@@ -23,9 +23,9 @@ lib: headers/Baal.h headers/Baal-Defines.h $(LIB_SOURCES)
 	echo "\n#endif" >> $(LIBNAME)
 
 tests: lib
-	$(CC) -o tests tests.c
-	./tests
-	rm -f tests
+	$(CC) -o run -Wall -Wextra -std=c99 -pedantic ./tests/main.c
+	./run
+	rm -f run
 
 clean:
 	rm -f $(DEV_EXECUTABLE) $(OBJECTS) $(LIBNAME)

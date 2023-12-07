@@ -136,7 +136,7 @@ void* Baal_realloc(Baal* baal, void* ptr, size_t newBlocksNumber) {
     Baal_internal_ChunkInfo* prev = NULL;
     Baal_internal_ChunkInfo* current = baal->first;
     while(1) {
-        if(chunkToReallocate < current) {
+        if(chunkToReallocate < current && !checkedNeighbors) {
             if(
                 (char*)chunkToReallocate + chunkToReallocate->chunkSize * baal->groupLength == (char*)current
                 && (requiredGroups <= chunkToReallocate->chunkSize + current->chunkSize)
