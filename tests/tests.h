@@ -1,3 +1,4 @@
+// Documentation: https://github.com/Astroner/macros#tests
 
 #if !defined(TESTS_TYPES)
     #define TESTS_TYPES
