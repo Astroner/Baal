@@ -123,6 +123,8 @@
                     TESTS_STD_PRINT("(%s)", info.expectText);\
                 }\
                 TESTS_STD_PRINT("\x1B[0m\n");\
+\
+                return 1;\
             }\
     \
             return 0;\
@@ -133,14 +135,14 @@
         typedef int TestSuit(void);\
         int main(void) {\
             TestSuit* suits[] = { __VA_ARGS__ };\
-\
+            int status = 0;\
             TESTS_STD_PRINT("\n\n");\
             for(size_t i = 0; i < sizeof(suits) / sizeof(suits[0]); i++) {\
-                suits[i]();\
+                if(suits[i]() == 1) status = 1;\
                 TESTS_STD_PRINT("\n");\
             }\
             TESTS_STD_PRINT("\n\n");\
-            return 0;\
+            return status;\
         }
 #else
     #define DESCRIBE(LABEL) \
@@ -160,7 +162,8 @@
                 if(info.expectText != NULL) {\
                     TESTS_STD_PRINT("(%s)", info.expectText);\
                 }\
-                TESTS_STD_PRINT("\x1B[0m\n");\
+                TESTS_STD_PRINT("\x1B[0m\n\n\n");\
+                return 1;\
             }\
     \
             TESTS_STD_PRINT("\n\n");\
