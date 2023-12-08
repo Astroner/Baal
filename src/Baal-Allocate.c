@@ -7,7 +7,7 @@ void* Baal_alloc(Baal* baal) {
 }
 
 void* Baal_allocMany(Baal* baal, size_t blocksNumber) {
-    #if !defined(BAAL_SKIP_INIT_CHECK)
+    #if !defined(BAAL_NO_INIT_CHECK)
         if(!baal->initialized) {
             Baal_init(baal);
         }

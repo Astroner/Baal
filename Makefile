@@ -13,7 +13,7 @@ $(DEV_EXECUTABLE): $(OBJECTS)
 	$(CC) $(CFLAGS) -o $(DEV_EXECUTABLE) $^
 
 $(OBJECTS): %.o: %.c
-	$(CC) $(CFLAGS) -c -std=c99 -pedantic -Iheaders -Wall -Wextra -o $@ $<
+	$(CC) $(CFLAGS) -c -DBAAL_DEBUG -std=c99 -pedantic -Iheaders -Wall -Wextra -o $@ $<
 
 lib: headers/Baal.h headers/Baal-Defines.h $(LIB_SOURCES)
 	cat headers/Baal.h > $(LIBNAME)

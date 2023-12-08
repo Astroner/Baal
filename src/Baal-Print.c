@@ -1,6 +1,7 @@
 #include "Baal.h"
 #include "Baal-Defines.h"
 
+#if defined(BAAL_DEBUG)
 
 static inline size_t Baal_internal_chunkGroupIndex(const Baal* baal, const void* chunk) {
     return ((char*)chunk - baal->buffer) / baal->groupLength;
@@ -67,9 +68,9 @@ void Baal_print(const Baal* baal) {
 void Baal_memorySnapshot(const Baal* baal) {
     size_t totalMemorySize = baal->groupsNumber * baal->groupLength;
 
-    BAAL_STD_PRINT("Total Memory Size: %zu\n", totalMemorySize);
-    BAAL_STD_PRINT("Added Info Size: %zu\n", BAAL_ADDED_INFO_SIZE);
-    BAAL_STD_PRINT("Block Size: %zu\nGroup Size: %zu\nGroups Number: %zu\n", baal->blockLength, baal->groupSize, baal->groupsNumber);
+    BAAL_STD_PRINT("Total Memory Length: %zu\n", totalMemorySize);
+    BAAL_STD_PRINT("Added Info Length: %zu\n", BAAL_ADDED_INFO_SIZE);
+    BAAL_STD_PRINT("Block Length: %zu\nGroup Size: %zu\nGroups Number: %zu\n", baal->blockLength, baal->groupSize, baal->groupsNumber);
     BAAL_STD_PRINT("First Free Chunk: %p\n", (void*)baal->first);
     BAAL_STD_PRINT("Bytes:\n");
     for(size_t i = 0; i < totalMemorySize; i++) {
@@ -89,3 +90,5 @@ void Baal_memorySnapshot(const Baal* baal) {
         BAAL_STD_PRINT("\n");
     }
 }
+
+#endif // BAAL_DEBUG

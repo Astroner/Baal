@@ -9,6 +9,7 @@ CREATE_PRINTF_LIKE_FUNCTION(testPrint, 1000)
 #include "deallocate.spec.c"
 #include "reallocate.spec.c"
 
+#define BAAL_DEBUG
 #define BAAL_STD_PRINT testPrint
 #define BAAL_IMPLEMENTATION
 #include "../Baal.h"
