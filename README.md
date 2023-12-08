@@ -4,7 +4,7 @@ This is STB-like library for block memory allocation.
 > Note, that this library supports multiple blocks allocation, so if you don't need it, and just want to allocate single blocks, consider to use [Zeb](https://github.com/Astroner/Zeb) because it is more memory efficient and fast for this case.
 
 # Include
-As with any header only library, you need to include *Baal.h* library to your project and define **BAAL_IMPLEMENTATION** before **include** statement to include the implementation.
+As with any header only library, you need to include [Baal.h](https://raw.githubusercontent.com/Astroner/Baal/master/Baal.h) library to your project and define **BAAL_IMPLEMENTATION** before **include** statement to include the implementation.
 
 # Table of content
  - [General](#general)
