@@ -15,6 +15,7 @@ As with any header only library, you need to include [Baal.h](https://raw.github
      - [Single block](#single-block)
      - [Multiple blocks](#multiple-blocks)
  - [Reallocate](#reallocate)
+ - [Iterate](#iterate)
  - [Clear](#clear)
  - [Debugging](#debugging)
      - [Print](#print)
@@ -243,6 +244,76 @@ int main(void) {
     char* a = Baal_alloc(baal);
 
     Baal_realloc(baal, a, 10);
+
+    return 0;
+}
+```
+
+# Iterate
+Use structure **BaalIterator** and related functions to iterate over the memory:
+```c
+#define BAAL_IMPLEMENTATION
+#include "Baal.h"
+
+int main(void) {
+    Baal_define(baal, 1, 1, 20);
+
+    char* a = Baal_alloc(baal);
+
+    BaalIterator iter;
+    BaalIterator_init(&iter, baal);
+    
+    char* current;
+    while((current = BaalIterator_next(&iter))) {
+        printf("Index: %zu, isFree: %d, Size: %zu\n", iter.index, iter.isFree, iter.chunkSize);
+    }
+    /* Output:
+        Index: 0, isFree: 0, Size: 1
+        Index: 1, isFree: 1, Size: 19
+    */
+
+    return 0;
+}
+```
+The code above does exactly the same that full example does, but uses the macro.
+```c
+#define BAAL_ITERATE(
+    BAAL,       // Baal instance
+    INFO_NAME,  // Iterator variable name
+    TYPE,       // Item type
+    VARIABLE    // Current item variable name
+)
+```
+
+**BaalIterator_init()** initializes the iterator, and **BaalIterator_next()** iterates over chunks of memory and returns pointer to the current one.
+Also **BaalIterator** contains information about current chunk of memory:
+```c
+typedef struct BaalIterator {
+    int isFree;         // Chunk status
+    size_t chunkSize;   // Chunk size in groups
+    void* current;      // Pointer to the current chunk of memory
+    size_t index;       // Index of the chunk in groups
+} BaalIterator;
+```
+Also you can free current chunk with function **BaalIterator_freeCurrent()**.
+
+Macro BAAL_ITERATE simplifies iterator boilerplate:
+```c
+#define BAAL_IMPLEMENTATION
+#include "Baal.h"
+
+int main(void) {
+    Baal_define(baal, 1, 1, 20);
+
+    char* a = Baal_alloc(baal);
+    
+    BAAL_ITERATE(baal, iter, char*, current) {
+        printf("Index: %zu, isFree: %d, Size: %zu\n", iter.index, iter.isFree, iter.chunkSize);
+    }
+    /* Output:
+        Index: 0, isFree: 0, Size: 1
+        Index: 1, isFree: 1, Size: 19
+    */
 
     return 0;
 }

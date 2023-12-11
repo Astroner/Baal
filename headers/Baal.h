@@ -83,4 +83,26 @@ void Baal_clear(Baal* baal);
 void Baal_print(const Baal* baal);
 void Baal_memorySnapshot(const Baal* baal);
 
+typedef struct BaalIterator {
+    int isFree;
+    size_t chunkSize;
+    void* current;
+    size_t index;
+
+    struct {
+        const Baal* baal;
+        Baal_internal_ChunkInfo* end;
+    } __internal;
+} BaalIterator;
+
+void BaalIterator_init(BaalIterator*, const Baal*);
+void* BaalIterator_next(BaalIterator*);
+void BaalIterator_freeCurrent(BaalIterator*);
+
+#define BAAL_ITERATE(BAAL, INFO_NAME, TYPE, VARIABLE)\
+    BaalIterator INFO_NAME;\
+    BaalIterator_init(&INFO_NAME, BAAL);\
+    TYPE VARIABLE;\
+    while((VARIABLE = BaalIterator_next(&INFO_NAME))) 
+
 #endif // BAAL_H

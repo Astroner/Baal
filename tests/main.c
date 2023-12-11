@@ -8,10 +8,11 @@ CREATE_PRINTF_LIKE_FUNCTION(testPrint, 1000)
 #include "allocate.spec.c"
 #include "deallocate.spec.c"
 #include "reallocate.spec.c"
+#include "iterator.spec.c"
 
 #define BAAL_DEBUG
 #define BAAL_STD_PRINT testPrint
 #define BAAL_IMPLEMENTATION
 #include "../Baal.h"
 
-RUN_TESTS(general, allocate, deallocate, reallocate)
+RUN_TESTS(general, allocate, deallocate, reallocate, iterator)

@@ -83,6 +83,28 @@ void Baal_clear(Baal* baal);
 void Baal_print(const Baal* baal);
 void Baal_memorySnapshot(const Baal* baal);
 
+typedef struct BaalIterator {
+    int isFree;
+    size_t chunkSize;
+    void* current;
+    size_t index;
+
+    struct {
+        const Baal* baal;
+        Baal_internal_ChunkInfo* end;
+    } __internal;
+} BaalIterator;
+
+void BaalIterator_init(BaalIterator*, const Baal*);
+void* BaalIterator_next(BaalIterator*);
+void BaalIterator_freeCurrent(BaalIterator*);
+
+#define BAAL_ITERATE(BAAL, INFO_NAME, TYPE, VARIABLE)\
+    BaalIterator INFO_NAME;\
+    BaalIterator_init(&INFO_NAME, BAAL);\
+    TYPE VARIABLE;\
+    while((VARIABLE = BaalIterator_next(&INFO_NAME))) 
+
 #endif // BAAL_H
 #if defined(BAAL_IMPLEMENTATION)
 #if !defined(BAAL_DEFINES_H)
@@ -584,67 +606,67 @@ void* Baal_realloc(Baal* baal, void* ptr, size_t newBlocksNumber) {
     return newPtr;
 }
 
+
+void BaalIterator_init(BaalIterator* iter, const Baal* baal) {
+    iter->current = NULL;
+
+    iter->__internal.baal = baal;
+}
+
+void* BaalIterator_next(BaalIterator* iter) {
+    if(iter->current == NULL) {
+        Baal_internal_ChunkInfo* chunk = (Baal_internal_ChunkInfo*)iter->__internal.baal->buffer;
+
+        if(iter->__internal.baal->first == chunk) {
+            iter->isFree = 1;
+            iter->__internal.end = chunk->nextChunk;
+        } else {
+            iter->isFree = 0;
+            iter->__internal.end = iter->__internal.baal->first;
+        }
+
+        iter->index = 0;
+        iter->current = (char*)chunk + BAAL_ADDED_INFO_SIZE;
+        iter->chunkSize = chunk->chunkSize;
+        return iter->current;
+    }
+
+    Baal_internal_ChunkInfo* current = (Baal_internal_ChunkInfo*)((char*)iter->current - BAAL_ADDED_INFO_SIZE);
+
+    Baal_internal_ChunkInfo* next = (Baal_internal_ChunkInfo*)((char*)current + current->chunkSize * iter->__internal.baal->groupLength);
+
+    if((void*)next == (void*)(iter->__internal.baal->buffer + iter->__internal.baal->groupsNumber * iter->__internal.baal->groupLength)) {
+        return NULL;
+    }
+
+    if(next == iter->__internal.end) {
+        iter->isFree = 1;
+        
+        if(next->nextChunk) {
+            iter->__internal.end = next->nextChunk;
+        } else {
+            iter->__internal.end = (void*)(iter->__internal.baal->buffer + iter->__internal.baal->groupsNumber * iter->__internal.baal->groupLength);
+        }
+    } else {
+        iter->isFree = 0;
+    }
+
+    iter->index += current->chunkSize;
+    iter->current = (char*)next + BAAL_ADDED_INFO_SIZE;
+    iter->chunkSize = next->chunkSize;
+
+    return iter->current;
+}
+
+void BaalIterator_freeCurrent(BaalIterator* iter) {
+    Baal_free((Baal*)iter->__internal.baal, iter->current);
+}
+
 #if defined(BAAL_DEBUG)
 
-static inline size_t Baal_internal_chunkGroupIndex(const Baal* baal, const void* chunk) {
-    return ((char*)chunk - baal->buffer) / baal->groupLength;
-}
-
-static void Baal_internal_printChunksBetween(const Baal* baal, const void* start, const void* finish) {
-    const Baal_internal_AddedInfo* current = start;
-    while(current != finish) {
-        BAAL_STD_PRINT("[%.3zu]    BUSY_CHUNK    SIZE: %zu\n", Baal_internal_chunkGroupIndex(baal, current), current->chunkSize);
-
-        current = (Baal_internal_AddedInfo*)((char*)current + current->chunkSize * baal->groupLength);
-    }
-}
-
 void Baal_print(const Baal* baal) {
-    if(baal->first == NULL) {
-        for(size_t i = 0; i < baal->groupsNumber; i += 0) {
-            Baal_internal_AddedInfo* current = (Baal_internal_AddedInfo*)(
-                baal->buffer + i * (BAAL_ADDED_INFO_SIZE + baal->blockLength * baal->groupSize)
-            );
-            BAAL_STD_PRINT("[%.3zu]    BUSY_CHUNK    SIZE: %zu\n", i, current->chunkSize);
-
-            i += current->chunkSize;
-        }
-
-        return;
-    }
-    
-    Baal_internal_ChunkInfo* prev = NULL;
-    Baal_internal_ChunkInfo* current = baal->first;
-    while(1) {
-        if(prev != NULL) {
-            Baal_internal_printChunksBetween(
-                baal, 
-                (char*)prev + prev->chunkSize * baal->groupLength,
-                current
-            );
-        } else {
-            Baal_internal_printChunksBetween(
-                baal, 
-                baal->buffer,
-                current
-            );
-        }
-
-        BAAL_STD_PRINT("[%.3zu]    FREE_CHUNK    SIZE: %zu\n", Baal_internal_chunkGroupIndex(baal, current), current->chunkSize);
-
-        if(current->nextChunk) {
-            prev = current;
-            current = current->nextChunk;
-        } else {
-            break;
-        }
-    }
-
-    char* currentChunkEnd = (char*)current + current->chunkSize * baal->groupLength;
-    char* bufferEnd = baal->buffer + baal->groupsNumber * baal->groupLength;
-
-    if(currentChunkEnd != bufferEnd) {
-        Baal_internal_printChunksBetween(baal, currentChunkEnd, bufferEnd);
+    BAAL_ITERATE(baal, info, void*, val) {
+        BAAL_STD_PRINT("[%.3zu]    %s_CHUNK    SIZE: %zu\n", info.index, info.isFree ? "FREE" : "BUSY", info.chunkSize);
     }
 }
 
